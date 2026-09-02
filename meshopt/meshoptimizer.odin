@@ -437,7 +437,7 @@ foreign lib {
 * Each component is stored as an 8-bit or 16-bit integer; stride must be equal to 4 (K <= 8) or 8 (K <= 16).
 * Input data must contain 4 floats for every color (count*4 total).
 */
-Encode_Exp_Mode :: enum i32 {
+Encode_Exp_Mode :: enum u32 {
 	/* When encoding exponents, use separate values for each component (maximum quality) */
 	Separate        = 0,
 
@@ -459,13 +459,34 @@ foreign lib {
 	encodeFilterColor :: proc(destination: rawptr, count: c.size_t, stride: c.size_t, bits: i32, data: ^f32) ---
 }
 
-SimplifyLockBorder      :: 1
-SimplifyErrorAbsolute   :: 4
-SimplifyPrune           :: 8
-SimplifyRegularize      :: 16
-SimplifyPermissive      :: 32
-SimplifyRegularizeLight :: 64
-SimplifySparse          :: 2
+Simplify_Options_Flags :: enum u32 {
+	/* Do not move vertices that are located on the topological border (vertices on triangle edges that don't have a paired triangle). Useful for simplifying portions of the larger mesh. */
+	LockBorder      = 0,
+
+	/* Improve simplification performance assuming input indices are a sparse subset of the mesh. Note that error becomes relative to subset extents. */
+	Sparse          = 1,
+
+	/* Treat error limit and resulting error as absolute instead of relative to mesh extents. */
+	ErrorAbsolute   = 2,
+
+	/* Remove disconnected parts of the mesh during simplification incrementally, regardless of the topological restrictions inside components. */
+	Prune           = 3,
+
+	/* Produce more regular triangle sizes and shapes during simplification, at some cost to geometric and attribute quality. */
+	Regularize      = 4,
+
+	/* Experimental: Allow collapses across attribute discontinuities, except for vertices that are tagged with meshopt_SimplifyVertex_Protect in vertex_lock. */
+	Permissive      = 5,
+
+	/* Produce more regular triangle sizes and shapes during simplification, at a small cost to geometric and attribute quality. */
+	RegularizeLight = 6,
+}
+
+/**
+* Simplification options
+*/
+Simplify_Options :: bit_set[Simplify_Options_Flags; u32]
+
 SimplifyVertex_Lock     :: 1
 SimplifyVertex_Priority :: 4
 SimplifyVertex_Protect  :: 2
@@ -488,7 +509,7 @@ foreign lib {
 	* options must be a bitmask composed of meshopt_SimplifyX options; 0 is a safe default
 	* result_error can be NULL; when it's not NULL, it will contain the resulting (relative/absolute) error after simplification
 	*/
-	simplify :: proc(destination: ^u32, indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, target_index_count: c.size_t, target_error: f32, options: Simplify_Options_Flags, result_error: ^f32) -> c.size_t ---
+	simplify :: proc(destination: ^u32, indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, target_index_count: c.size_t, target_error: f32, options: Simplify_Options, result_error: ^f32) -> c.size_t ---
 
 	/**
 	* Mesh simplifier with attribute metric
@@ -512,7 +533,7 @@ foreign lib {
 	* options must be a bitmask composed of meshopt_SimplifyX options; 0 is a safe default
 	* result_error can be NULL; when it's not NULL, it will contain the resulting (relative/absolute) error after simplification
 	*/
-	simplifyWithAttributes :: proc(destination: ^u32, indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, vertex_attributes: ^f32, vertex_attributes_stride: c.size_t, attribute_weights: ^f32, attribute_count: c.size_t, vertex_lock: ^u8, target_index_count: c.size_t, target_error: f32, options: Simplify_Options_Flags, result_error: ^f32) -> c.size_t ---
+	simplifyWithAttributes :: proc(destination: ^u32, indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, vertex_attributes: ^f32, vertex_attributes_stride: c.size_t, attribute_weights: ^f32, attribute_count: c.size_t, vertex_lock: ^u8, target_index_count: c.size_t, target_error: f32, options: Simplify_Options, result_error: ^f32) -> c.size_t ---
 
 	/**
 	* Mesh simplifier with position/attribute update
@@ -535,7 +556,7 @@ foreign lib {
 	* options must be a bitmask composed of meshopt_SimplifyX options; 0 is a safe default
 	* result_error can be NULL; when it's not NULL, it will contain the resulting (relative/absolute) error after simplification
 	*/
-	simplifyWithUpdate :: proc(indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, vertex_attributes: ^f32, vertex_attributes_stride: c.size_t, attribute_weights: ^f32, attribute_count: c.size_t, vertex_lock: ^u8, target_index_count: c.size_t, target_error: f32, options: Simplify_Options_Flags, result_error: ^f32) -> c.size_t ---
+	simplifyWithUpdate :: proc(indices: ^u32, index_count: c.size_t, vertex_positions: ^f32, vertex_count: c.size_t, vertex_positions_stride: c.size_t, vertex_attributes: ^f32, vertex_attributes_stride: c.size_t, attribute_weights: ^f32, attribute_count: c.size_t, vertex_lock: ^u8, target_index_count: c.size_t, target_error: f32, options: Simplify_Options, result_error: ^f32) -> c.size_t ---
 
 	/**
 	* Mesh simplifier (sloppy)
@@ -914,8 +935,8 @@ foreign lib {
 	opacityMapCompact :: proc(data: ^u8, data_size: c.size_t, levels: ^u8, offsets: ^u32, omm_count: c.size_t, omm_indices: ^i32, triangle_count: c.size_t, states: i32) -> c.size_t ---
 }
 
-TangentCompatible   :: 1
 TangentZeroFallback :: 2
+TangentCompatible   :: 1
 
 @(default_calling_convention="c", link_prefix="meshopt_")
 foreign lib {
