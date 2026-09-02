@@ -1,0 +1,44 @@
+// Configuration for odin-c-bindgen (https://github.com/karl-zylinski/odin-c-bindgen).
+// Consumed by the "Generate bindings" GitHub Actions workflow, which checks out
+// meshoptimizer into ./meshoptimizer before running the generator.
+inputs = [
+	"meshoptimizer/src"
+]
+
+output_folder = "meshopt"
+package_name  = "meshopt"
+
+remove_type_prefix     = "meshopt_"
+remove_function_prefix = "meshopt_"
+remove_macro_prefix    = "meshopt_"
+required_prefix        = "meshopt_"
+
+// Per-platform foreign import block (inlined at the top of the generated file).
+// Using imports_file instead of import_lib so the same bindings work on
+// Windows, Linux and macOS.
+imports_file = "imports.odin"
+
+rename = {
+	"meshopt_EncodeExpMode"         = "Encode_Exp_Mode"
+	"meshopt_VertexCacheStatistics" = "Vertex_Cache_Statistics"
+	"meshopt_VertexFetchStatistics" = "Vertex_Fetch_Statistics"
+	"meshopt_OverdrawStatistics"    = "Overdraw_Statistics"
+	"meshopt_CoverageStatistics"    = "Coverage_Statistics"
+	"meshopt_SimplifyOptions"       = "Simplify_Options"
+}
+
+bit_setify = {
+	"meshopt_SimplifyOptions" = "Simplify_Options_Flags"
+}
+
+procedure_type_overrides = {
+	"meshopt_simplify.options"               = "Simplify_Options_Flags"
+	"meshopt_simplifyWithAttributes.options" = "Simplify_Options_Flags"
+	"meshopt_simplifyWithUpdate.options"     = "Simplify_Options_Flags"
+}
+
+remove_macros = [
+	"MESHOPTIMIZER_API"
+	"MESHOPTIMIZER_EXPERIMENTAL"
+	"MESHOPTIMIZER_ALLOC_CALLCONV"
+]

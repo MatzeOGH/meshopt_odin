@@ -1,0 +1,14 @@
+# Build intermediates (produced by scripts/ and CI)
+/obj/
+/build/
+/bindgen.bin
+/bindgen.exe
+/artifacts/
+
+# Local meshoptimizer checkout (fetched by CI / build scripts)
+/meshoptimizer/
+# odin-c-bindgen tool checkout (fetched by CI)
+/bindgen-tool/
+
+# Odin test output
+/test/*.bin

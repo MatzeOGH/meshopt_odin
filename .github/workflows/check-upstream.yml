@@ -1,0 +1,41 @@
+name: Check upstream
+
+# Weekly check for a new meshoptimizer release. If the latest upstream tag differs
+# from the one we last bound (.meshopt-version), regenerate the bindings.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+      version: ${{ steps.compare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: compare
+        run: |
+          LATEST=$(curl -fsSL https://api.github.com/repos/zeux/meshoptimizer/releases/latest | jq -r .tag_name)
+          CURRENT=$(cat .meshopt-version 2>/dev/null || echo "none")
+          echo "latest=$LATEST current=$CURRENT"
+          echo "version=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ "$LATEST" != "$CURRENT" ] && [ -n "$LATEST" ] && [ "$LATEST" != "null" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  regenerate:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    uses: ./.github/workflows/generate.yml
+    with:
+      version: ${{ needs.check.outputs.version }}
+    permissions:
+      contents: write
+    secrets: inherit
