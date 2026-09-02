@@ -80,7 +80,25 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install libclang (required by odin-c-bindgen)
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+          # odin-c-bindgen does `foreign import "system:clang"`, i.e. it links with
+          # -lclang. Ubuntu only ships the unversioned libclang.so symlink inside
+          # /usr/lib/llvm-<ver>/lib (the default search path has just the versioned
+          # libclang-<ver>.so.<ver>), so ld cannot resolve -lclang on its own.
+          # Export the directory for the link step below.
+          CLANG_SO=$(ls /usr/lib/llvm-*/lib/libclang.so /usr/lib/*/libclang.so 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$CLANG_SO" ]; then
+            echo "libclang.so not found after installing libclang-dev" >&2
+            ls -la /usr/lib/llvm-*/lib/libclang* /usr/lib/*/libclang* 2>/dev/null || true
+            exit 1
+          fi
+          CLANG_LIB_DIR=$(dirname "$CLANG_SO")
+          echo "Found libclang at $CLANG_SO"
+          echo "CLANG_LIB_DIR=$CLANG_LIB_DIR" >> "$GITHUB_ENV"
+          echo "LIBRARY_PATH=$CLANG_LIB_DIR${LIBRARY_PATH:+:$LIBRARY_PATH}" >> "$GITHUB_ENV"
 
       - name: Setup Odin
         uses: laytan/setup-odin@v2
@@ -102,7 +120,7 @@ jobs:
           path: bindgen-tool
 
       - name: Build bindgen
-        run: odin build bindgen-tool/src -out:bindgen.bin -o:speed
+        run: odin build bindgen-tool/src -out:bindgen.bin -o:speed -extra-linker-flags:"-L$CLANG_LIB_DIR"
 
       - name: Download built libraries
         uses: actions/download-artifact@v4

@@ -18,6 +18,13 @@ required_prefix        = "meshopt_"
 // Windows, Linux and macOS.
 imports_file = "imports.odin"
 
+// The simplification-options flags are an anonymous enum in meshoptimizer.h, so
+// there is no type for rename/bit_setify to act on. Give it a name first, keyed
+// by the C name of its first member.
+deanon_enums = {
+	"meshopt_SimplifyLockBorder" = "meshopt_SimplifyOptions"
+}
+
 rename = {
 	"meshopt_EncodeExpMode"         = "Encode_Exp_Mode"
 	"meshopt_VertexCacheStatistics" = "Vertex_Cache_Statistics"
@@ -31,10 +38,12 @@ bit_setify = {
 	"meshopt_SimplifyOptions" = "Simplify_Options_Flags"
 }
 
+// bit_setify names the backing *enum* Simplify_Options_Flags; the renamed type
+// Simplify_Options is the bit_set itself, which is what the procedures take.
 procedure_type_overrides = {
-	"meshopt_simplify.options"               = "Simplify_Options_Flags"
-	"meshopt_simplifyWithAttributes.options" = "Simplify_Options_Flags"
-	"meshopt_simplifyWithUpdate.options"     = "Simplify_Options_Flags"
+	"meshopt_simplify.options"               = "Simplify_Options"
+	"meshopt_simplifyWithAttributes.options" = "Simplify_Options"
+	"meshopt_simplifyWithUpdate.options"     = "Simplify_Options"
 }
 
 remove_macros = [
