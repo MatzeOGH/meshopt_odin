@@ -21,6 +21,12 @@ import meshopt "path/to/meshopt"
 // Names have the `meshopt_` prefix stripped:
 h := meshopt.quantizeHalf(1.0)
 count := meshopt.generateVertexRemap(/* ... */)
+
+// Count parameters are `#any_int`, so a plain `int` is accepted:
+meshopt.optimizeVertexCache(raw_data(out), raw_data(indices), len(indices), vertex_count)
+
+// Flag arguments are bit sets:
+n := meshopt.simplify(/* ... */, {.LockBorder, .Sparse}, &error)
 ```
 
 The library is self-contained C. meshoptimizer uses C++ internally, but each
@@ -81,21 +87,29 @@ This is the main pipeline. Start it manually from the **Actions** tab
    `macos-latest`, and also a wasm32 object. The build compiles every
    `meshoptimizer/src/*.cpp` file. It globs the file list instead of a hardcoded
    list, so upstream refactors do not break it.
-2. **Generate** the bindings with
-   [odin-c-bindgen](https://github.com/karl-zylinski/odin-c-bindgen). The file
-   [`bindgen.sjson`](bindgen.sjson) controls the generator.
-3. **Verify** the bindings. The job builds and runs [`test/`](test/main.odin)
+2. **Check** the generator configuration with
+   [`scripts/prepare_bindgen.py`](scripts/prepare_bindgen.py), then expand it.
+3. **Generate** the bindings with
+   [odin-c-bindgen](https://github.com/karl-zylinski/odin-c-bindgen).
+4. **Verify** the bindings. The job builds and runs [`test/`](test/main.odin)
    against the new library, first natively, then as `wasi_wasm32` under the WASI
    runtime of Node. Thus the wasm target must run, and not only link.
-4. **Commit** the new `meshopt/` directory and write the bound version into
+5. **Commit** the new `meshopt/` directory and write the bound version into
    `.meshopt-version`. Then **publish a release** with the packaged bindings.
+   If you set the `pull_request` input, the job opens a pull request instead,
+   and it publishes no release.
 
 ### [`Check upstream`](.github/workflows/check-upstream.yml)
 
 This workflow runs each week, and also on demand. It compares the latest
 meshoptimizer release against `.meshopt-version`. If the two versions differ, it
-calls `Generate bindings` for the new version. Thus the repository tracks
-upstream automatically.
+calls `Generate bindings` for the new version.
+
+An upstream bump regenerates the full binding surface, so this path sets
+`pull_request: true`. The workflow pushes the new bindings to a
+`bindings/<version>` branch and opens a pull request. A person reads the diff,
+then merges it. To publish the release, run `Generate bindings` on the default
+branch after the merge.
 
 ## Bootstrap of a fork
 
@@ -136,6 +150,26 @@ steps, read the `bindings` job in
 [`bindgen.sjson`](bindgen.sjson) and [`imports.odin`](imports.odin) control the
 shape of the bindings: the renames, the bit sets, the removal of prefixes, and
 the imports for each platform. The build flags are in [`scripts/`](scripts/).
+
+[`scripts/prepare_bindgen.py`](scripts/prepare_bindgen.py) runs before the
+generator, and it does two things.
+
+- It compares each top-level key in `bindgen.sjson` against the fields of the
+  `Config` struct of odin-c-bindgen, and it stops the build on an unknown key.
+  odin-c-bindgen ignores a key that it does not know, and it prints no message.
+  A typo is therefore silent, and it makes the bindings wrong in ways that are
+  hard to find.
+- It writes `bindgen.generated.sjson`, which adds `#any_int` to each of the 215
+  `size_t` parameters of the C API. `procedure_type_overrides` accepts no
+  wildcards, so the script reads the list from the header. New upstream
+  parameters get the same treatment without an edit here.
+
+### Pinned toolchain
+
+The `env` block of [`generate.yml`](.github/workflows/generate.yml) pins the
+Odin release and the odin-c-bindgen commit. A regeneration is thus
+reproducible, and a change in either tool cannot alter the bindings without a
+commit here. Bump the two values deliberately, and read the diff that results.
 
 ## License
 

@@ -12,3 +12,6 @@
 
 # Odin test output
 /test/*.bin
+
+# Expanded bindgen config (produced by scripts/prepare_bindgen.py)
+/bindgen.generated.sjson
