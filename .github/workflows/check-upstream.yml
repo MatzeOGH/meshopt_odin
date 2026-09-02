@@ -36,6 +36,10 @@ jobs:
     uses: ./.github/workflows/generate.yml
     with:
       version: ${{ needs.check.outputs.version }}
+      # An upstream bump regenerates every binding, so propose it as a pull
+      # request rather than committing and releasing unreviewed.
+      pull_request: true
     permissions:
       contents: write
+      pull-requests: write
     secrets: inherit

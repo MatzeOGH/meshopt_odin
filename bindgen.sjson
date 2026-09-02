@@ -11,7 +11,6 @@ package_name  = "meshopt"
 remove_type_prefix     = "meshopt_"
 remove_function_prefix = "meshopt_"
 remove_macro_prefix    = "meshopt_"
-required_prefix        = "meshopt_"
 
 // Per-platform foreign import block (inlined at the top of the generated file).
 // Using imports_file instead of import_lib so the same bindings work on
@@ -22,7 +21,9 @@ imports_file = "imports.odin"
 // there is no type for rename/bit_setify to act on. Give it a name first, keyed
 // by the C name of its first member.
 deanon_enums = {
-	"meshopt_SimplifyLockBorder" = "meshopt_SimplifyOptions"
+	"meshopt_SimplifyLockBorder"  = "meshopt_SimplifyOptions"
+	"meshopt_SimplifyVertex_Lock" = "meshopt_SimplifyVertex"
+	"meshopt_TangentCompatible"   = "meshopt_TangentOptions"
 }
 
 rename = {
@@ -32,10 +33,18 @@ rename = {
 	"meshopt_OverdrawStatistics"    = "Overdraw_Statistics"
 	"meshopt_CoverageStatistics"    = "Coverage_Statistics"
 	"meshopt_SimplifyOptions"       = "Simplify_Options"
+	"meshopt_SimplifyVertex"        = "Simplify_Vertex"
+	"meshopt_TangentOptions"        = "Tangent_Options"
 }
 
+// Simplify_Vertex is deliberately NOT bit_setified. Its flags are stored in
+// `unsigned char` vertex_lock arrays, and bit_setify derives the bit_set backing
+// type from the C enum (int -> u32), which would give a 4-byte set with the
+// wrong stride. Forcing it with type_overrides or remove deletes the generated
+// enum along with it, so the flags stay a plain enum holding the C values.
 bit_setify = {
 	"meshopt_SimplifyOptions" = "Simplify_Options_Flags"
+	"meshopt_TangentOptions"  = "Tangent_Options_Flags"
 }
 
 // bit_setify names the backing *enum* Simplify_Options_Flags; the renamed type
@@ -44,10 +53,5 @@ procedure_type_overrides = {
 	"meshopt_simplify.options"               = "Simplify_Options"
 	"meshopt_simplifyWithAttributes.options" = "Simplify_Options"
 	"meshopt_simplifyWithUpdate.options"     = "Simplify_Options"
+	"meshopt_generateTangents.options"       = "Tangent_Options"
 }
-
-remove_macros = [
-	"MESHOPTIMIZER_API"
-	"MESHOPTIMIZER_EXPERIMENTAL"
-	"MESHOPTIMIZER_ALLOC_CALLCONV"
-]
